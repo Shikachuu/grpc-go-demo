@@ -22,5 +22,6 @@ message TemplateRequest {
 message TemplateResponse {
     int64 template_id = 1;
     string template = 2;
+    string name = 3;
     optional string fileExtension = 4;
 }

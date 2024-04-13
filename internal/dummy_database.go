@@ -1,15 +1,17 @@
 package internal
 
-import "github.com/Shikachuu/template-files/pkg"
+import (
+	"github.com/Shikachuu/template-files/pkg"
+)
 
 type DummyDatabase struct {
-	templateRecords map[int64]pkg.TemplateRecord
+	TemplateRecords map[int64]pkg.TemplateRecord
 }
 
 var _ pkg.Database = &DummyDatabase{}
 
 func (d *DummyDatabase) GetTemplateById(id int64) (pkg.TemplateRecord, error) {
-	templateRecord, ok := d.templateRecords[id]
+	templateRecord, ok := d.TemplateRecords[id]
 
 	if !ok {
 		return pkg.TemplateRecord{}, pkg.ErrNotFound
@@ -18,14 +20,21 @@ func (d *DummyDatabase) GetTemplateById(id int64) (pkg.TemplateRecord, error) {
 	return templateRecord, nil
 }
 
-func (d *DummyDatabase) CreateTemplate(template string, fileExtension string) (pkg.TemplateRecord, error) {
-	id := int64(len(d.templateRecords))
+func (d *DummyDatabase) CreateTemplate(name string, template string, fileExtension *string) (pkg.TemplateRecord, error) {
+	for _, tr := range d.TemplateRecords {
+		if tr.Name == name {
+			return pkg.TemplateRecord{}, pkg.ErrDuplicate
+		}
+	}
 
-	d.templateRecords[id] = pkg.TemplateRecord{
+	id := int64(len(d.TemplateRecords) + 1)
+
+	d.TemplateRecords[id] = pkg.TemplateRecord{
 		ID:            id,
+		Name:          name,
 		Template:      template,
 		FileExtension: fileExtension,
 	}
 
-	return d.templateRecords[id], nil
+	return d.TemplateRecords[id], nil
 }

@@ -4,8 +4,13 @@ default:
 # download and install binaries for development
 bootstrap: _install-protoc _install-grpcurl
 
+# build server binary
 build:
     @go build -a -o bin/templates-srv cmd/server.go
+
+# run feature tests
+test:
+    @go test -cover -v ./...
 
 # generate the gRPC client/server stubs
 grpc: _install-protoc
@@ -14,8 +19,8 @@ grpc: _install-protoc
 _install-protoc:
     #!/usr/bin/env bash
     if [[ ! -f hack/bin/protoc ]]; then
-        ARCH=$(uname -m)
-        [[ "$ARCH" == "arm64" || "$ARCH" == "aarch64" ]] && ARCH="aarch_64"
+        ARCH="{{ arch() }}"
+        [[ "$ARCH" == "aarch64" ]] && ARCH="aarch_64"
         OS="{{ os() }}"
         [[ "$OS" == "macos" ]] && OS="osx"
 
@@ -29,11 +34,10 @@ _install-grpcurl:
     #!/usr/bin/env bash
     if [[ ! -f hack/bin/grpcurl ]]; then
         VERSION="1.9.1"
-        ARCH=$(uname -m)
-        [[ "$ARCH" == "arm64" || "$ARCH" == "aarch64" ]] && ARCH="arm64"
+        ARCH="{{ arch() }}"
+        [[ "$ARCH" == "aarch64" ]] && ARCH="arm64"
         OS="{{ os() }}"
         [[ "$OS" == "macos" ]] && OS="osx"
-        #echo "https://github.com/fullstorydev/grpcurl/releases/download/v$VERSION/grpcurl_${VERSION}_${OS}_${ARCH}.tar.gz"
         curl -sSL "https://github.com/fullstorydev/grpcurl/releases/download/v$VERSION/grpcurl_${VERSION}_${OS}_${ARCH}.tar.gz" | tar -xz -C hack/bin grpcurl
         chmod +x hack/bin/grpcurl
     fi

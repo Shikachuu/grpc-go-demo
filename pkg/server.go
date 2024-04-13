@@ -4,12 +4,16 @@ import (
 	"context"
 
 	"github.com/Shikachuu/template-files/proto"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type Server struct {
 	proto.UnimplementedTemplateServiceServer
 	db Database
 }
+
+var _ proto.TemplateServiceServer = &Server{}
 
 func NewServer(db Database) *Server {
 	return &Server{db: db}
@@ -18,33 +22,36 @@ func NewServer(db Database) *Server {
 func (s *Server) GetTemplateById(ctx context.Context, r *proto.GetTemplateRequest) (*proto.TemplateResponse, error) {
 	t, err := s.db.GetTemplateById(r.TemplateId)
 	if err != nil {
-		return nil, err
+		if err == ErrNotFound {
+			return nil, status.Errorf(codes.NotFound, "template with id %d not found", r.TemplateId)
+		}
+
+		return nil, status.Errorf(codes.Internal, "failed to get template by id: %v", err)
 	}
 
 	tr := &proto.TemplateResponse{
 		TemplateId:    t.ID,
+		Name:          t.Name,
 		Template:      t.Template,
-		FileExtension: &t.FileExtension,
+		FileExtension: t.FileExtension,
 	}
 	return tr, nil
 }
 
 func (s *Server) CreateTemplate(ctx context.Context, r *proto.TemplateRequest) (*proto.TemplateResponse, error) {
-	fe := ""
-
-	if r.FileExtension != nil {
-		fe = *r.FileExtension
-	}
-
-	t, err := s.db.CreateTemplate(r.Template, fe)
+	t, err := s.db.CreateTemplate(r.Name, r.Template, r.FileExtension)
 	if err != nil {
-		return nil, err
+		if err == ErrDuplicate {
+			return nil, status.Errorf(codes.AlreadyExists, "template with name %s already exists", r.Name)
+		}
+		return nil, status.Errorf(codes.Internal, "failed to create template: %v", err)
 	}
 
 	tr := &proto.TemplateResponse{
 		TemplateId:    t.ID,
+		Name:          t.Name,
 		Template:      t.Template,
-		FileExtension: &t.FileExtension,
+		FileExtension: t.FileExtension,
 	}
 	return tr, nil
 }
