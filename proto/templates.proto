@@ -1,0 +1,26 @@
+syntax = "proto3";
+package template;
+
+option go_package = "./proto";
+
+service TemplateService {
+    rpc GetTemplateById(GetTemplateRequest) returns (TemplateResponse) {}
+    rpc CreateTemplate(TemplateRequest) returns (TemplateResponse) {}
+}
+
+message GetTemplateRequest {
+    int64 template_id = 1;
+}
+
+message TemplateRequest {
+    int64 template_id = 1;
+    string template = 2;
+    string name = 3;
+    optional string fileExtension = 4;
+}
+
+message TemplateResponse {
+    int64 template_id = 1;
+    string template = 2;
+    optional string fileExtension = 4;
+}
