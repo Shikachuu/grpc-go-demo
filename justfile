@@ -1,3 +1,8 @@
+set positional-arguments
+
+alias t := test
+alias b := build
+
 default:
     @just --list
 
@@ -5,8 +10,15 @@ default:
 bootstrap: _install-protoc _install-grpcurl
 
 # build server binary
-build:
-    @go build -a -o bin/templates-srv cmd/server.go
+build target:
+    #!/usr/bin/env bash
+    TARGET="{{ target }}"
+    if [[ $TARGET != "prod" && $TARGET != "dev" ]]; then
+        echo "invalid target: $TARGET must be one of: prod, dev"
+        exit 1
+    fi
+    [[ $TARGET == "prod" ]] && go build -a -ldflags "-s -w" -o bin/server cmd/server.go
+    [[ $TARGET == "dev" ]] && go build -a -o bin/server cmd/server.go
 
 # run feature tests
 test:
