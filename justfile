@@ -10,7 +10,7 @@ default:
 bootstrap: _install-protoc _install-grpcurl
 
 # build server binary
-build target:
+@build target:
     #!/usr/bin/env bash
     TARGET="{{ target }}"
     if [[ $TARGET != "prod" && $TARGET != "dev" ]]; then
