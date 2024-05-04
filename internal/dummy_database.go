@@ -20,6 +20,16 @@ func (d *DummyDatabase) GetTemplateById(id int64) (pkg.TemplateRecord, error) {
 	return templateRecord, nil
 }
 
+func (d *DummyDatabase) GetTemplateByName(name string) (pkg.TemplateRecord, error) {
+	for _, tr := range d.TemplateRecords {
+		if tr.Name == name {
+			return tr, nil
+		}
+	}
+
+	return pkg.TemplateRecord{}, pkg.ErrNotFound
+}
+
 func (d *DummyDatabase) CreateTemplate(name string, template string, fileExtension *string) (pkg.TemplateRecord, error) {
 	for _, tr := range d.TemplateRecords {
 		if tr.Name == name {

@@ -24,6 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 type TemplateServiceClient interface {
 	GetTemplateById(ctx context.Context, in *GetTemplateRequest, opts ...grpc.CallOption) (*TemplateResponse, error)
 	CreateTemplate(ctx context.Context, in *TemplateRequest, opts ...grpc.CallOption) (*TemplateResponse, error)
+	GetTemplateByName(ctx context.Context, in *GetTemplateByNameRequest, opts ...grpc.CallOption) (*TemplateResponse, error)
 }
 
 type templateServiceClient struct {
@@ -52,12 +53,22 @@ func (c *templateServiceClient) CreateTemplate(ctx context.Context, in *Template
 	return out, nil
 }
 
+func (c *templateServiceClient) GetTemplateByName(ctx context.Context, in *GetTemplateByNameRequest, opts ...grpc.CallOption) (*TemplateResponse, error) {
+	out := new(TemplateResponse)
+	err := c.cc.Invoke(ctx, "/template.TemplateService/GetTemplateByName", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TemplateServiceServer is the server API for TemplateService service.
 // All implementations must embed UnimplementedTemplateServiceServer
 // for forward compatibility
 type TemplateServiceServer interface {
 	GetTemplateById(context.Context, *GetTemplateRequest) (*TemplateResponse, error)
 	CreateTemplate(context.Context, *TemplateRequest) (*TemplateResponse, error)
+	GetTemplateByName(context.Context, *GetTemplateByNameRequest) (*TemplateResponse, error)
 	mustEmbedUnimplementedTemplateServiceServer()
 }
 
@@ -70,6 +81,9 @@ func (UnimplementedTemplateServiceServer) GetTemplateById(context.Context, *GetT
 }
 func (UnimplementedTemplateServiceServer) CreateTemplate(context.Context, *TemplateRequest) (*TemplateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateTemplate not implemented")
+}
+func (UnimplementedTemplateServiceServer) GetTemplateByName(context.Context, *GetTemplateByNameRequest) (*TemplateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTemplateByName not implemented")
 }
 func (UnimplementedTemplateServiceServer) mustEmbedUnimplementedTemplateServiceServer() {}
 
@@ -120,6 +134,24 @@ func _TemplateService_CreateTemplate_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TemplateService_GetTemplateByName_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTemplateByNameRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TemplateServiceServer).GetTemplateByName(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/template.TemplateService/GetTemplateByName",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TemplateServiceServer).GetTemplateByName(ctx, req.(*GetTemplateByNameRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TemplateService_ServiceDesc is the grpc.ServiceDesc for TemplateService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -134,6 +166,10 @@ var TemplateService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateTemplate",
 			Handler:    _TemplateService_CreateTemplate_Handler,
+		},
+		{
+			MethodName: "GetTemplateByName",
+			Handler:    _TemplateService_GetTemplateByName_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

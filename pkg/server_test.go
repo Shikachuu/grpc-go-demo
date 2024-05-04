@@ -94,6 +94,47 @@ func Test_GetTemplateById(t *testing.T) {
 	}
 }
 
+func Test_GetTemplateByName(t *testing.T) {
+	client := newClient()
+	testCases := []struct {
+		input           *proto.GetTemplateByNameRequest
+		desc            string
+		expected        *proto.TemplateResponse
+		expectedErrCode codes.Code
+	}{
+		{
+			desc:     "get template by name positive",
+			input:    &proto.GetTemplateByNameRequest{Name: "test"},
+			expected: &proto.TemplateResponse{TemplateId: 1, Name: "test", Template: "template", FileExtension: &dummyExtension},
+		},
+		{
+			desc:            "get template by invalid name",
+			input:           &proto.GetTemplateByNameRequest{Name: "invalid"},
+			expectedErrCode: codes.NotFound,
+		},
+	}
+
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			r, err := client.GetTemplateByName(context.Background(), tC.input)
+			if err != nil {
+				if tC.expectedErrCode == codes.OK {
+					t.Fatalf("failed to create template: %v", err)
+				}
+
+				st, ok := status.FromError(err)
+				if !ok || st.Code() != tC.expectedErrCode {
+					t.Fatalf("expected error %v, got %v", tC.expected, r)
+				}
+			}
+
+			if !pb.Equal(r, tC.expected) {
+				t.Fatalf("expected %v, got %v", tC.expected, r)
+			}
+		})
+	}
+}
+
 func Test_CreateTemplate(t *testing.T) {
 	client := newClient()
 	testCases := []struct {

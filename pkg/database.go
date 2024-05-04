@@ -14,5 +14,6 @@ var ErrDuplicate = errors.New("template with the same name already exists")
 
 type Database interface {
 	GetTemplateById(id int64) (TemplateRecord, error)
+	GetTemplateByName(name string) (TemplateRecord, error)
 	CreateTemplate(name string, template string, fileExtension *string) (TemplateRecord, error)
 }

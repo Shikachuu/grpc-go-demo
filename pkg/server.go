@@ -19,6 +19,25 @@ func NewServer(db Database) *Server {
 	return &Server{db: db}
 }
 
+func (s *Server) GetTemplateByName(ctx context.Context, r *proto.GetTemplateByNameRequest) (*proto.TemplateResponse, error) {
+	t, err := s.db.GetTemplateByName(r.Name)
+	if err != nil {
+		if err == ErrNotFound {
+			return nil, status.Errorf(codes.NotFound, "template with name %s not found", r.Name)
+		}
+
+		return nil, status.Errorf(codes.Internal, "failed to get template by name: %v", err)
+	}
+
+	tr := &proto.TemplateResponse{
+		TemplateId:    t.ID,
+		Name:          t.Name,
+		Template:      t.Template,
+		FileExtension: t.FileExtension,
+	}
+	return tr, nil
+}
+
 func (s *Server) GetTemplateById(ctx context.Context, r *proto.GetTemplateRequest) (*proto.TemplateResponse, error) {
 	t, err := s.db.GetTemplateById(r.TemplateId)
 	if err != nil {

@@ -6,10 +6,15 @@ option go_package = "./proto";
 service TemplateService {
     rpc GetTemplateById(GetTemplateRequest) returns (TemplateResponse) {}
     rpc CreateTemplate(TemplateRequest) returns (TemplateResponse) {}
+    rpc GetTemplateByName(GetTemplateByNameRequest) returns (TemplateResponse) {}
 }
 
 message GetTemplateRequest {
     int64 template_id = 1;
+}
+
+message GetTemplateByNameRequest {
+    string name = 1;
 }
 
 message TemplateRequest {
