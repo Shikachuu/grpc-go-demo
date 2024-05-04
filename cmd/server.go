@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"io"
 	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -18,13 +20,13 @@ import (
 )
 
 func main() {
-    ctx := context.Background()
-	if err := run(ctx); err != nil {
+	ctx := context.Background()
+	if err := run(ctx, os.Stderr); err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 }
 
-func run(ctx context.Context) error {
+func run(ctx context.Context, w io.Writer) error {
 	var (
 		db internal.DummyDatabase
 		wg sync.WaitGroup
@@ -32,28 +34,37 @@ func run(ctx context.Context) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
+	logger := slog.New(slog.NewTextHandler(
+		w,
+		&slog.HandlerOptions{
+			Level:     slog.LevelDebug,
+			AddSource: true,
+		},
+	))
+
 	wg.Add(1)
-	go runGRPCServer(&wg, ctx, &db, "8080")
-    
-    wg.Add(1)
-    go runHTTPServer(&wg, ctx, &db, "8081")
-	
-    wg.Wait()
+	go runGRPCServer(&wg, ctx, logger.With("server", "grpc"), &db, "8080")
+
+	wg.Add(1)
+	go runHTTPServer(&wg, ctx, logger.With("server", "http"), &db, "8081")
+
+	wg.Wait()
 	return nil
 }
 
-func runHTTPServer(wg *sync.WaitGroup, ctx context.Context, db pkg.Database, port string) {
+func runHTTPServer(wg *sync.WaitGroup, ctx context.Context, logger *slog.Logger, db pkg.Database, port string) {
 	httpServer := &http.Server{
 		Addr:         net.JoinHostPort("", port),
-		Handler:      web.NewHTTPHandler(db),
+		Handler:      web.NewHTTPHandler(db, logger),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  15 * time.Second,
 	}
 	go func() {
-		log.Println("starting http server...")
+		logger.InfoContext(ctx, "starting http server...", "port", port)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("failed to listen: %v", err)
+			logger.ErrorContext(ctx, "failed to serve http", "error", err.Error())
+			os.Exit(1)
 		}
 	}()
 
@@ -61,35 +72,38 @@ func runHTTPServer(wg *sync.WaitGroup, ctx context.Context, db pkg.Database, por
 		defer wg.Done()
 
 		<-ctx.Done()
-		log.Println("shutting down http server...")
+		logger.InfoContext(ctx, "shutting down http server...")
 
 		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 		if err := httpServer.Shutdown(ctx); err != nil {
-			log.Fatalf("failed to shutdown http server: %v", err)
+			logger.ErrorContext(ctx, "failed to shutdown http server", "error", err.Error())
+			os.Exit(1)
 		}
 	}()
 }
 
-func runGRPCServer(wg *sync.WaitGroup, ctx context.Context, db pkg.Database, port string) {
+func runGRPCServer(wg *sync.WaitGroup, ctx context.Context, logger *slog.Logger, db pkg.Database, port string) {
 	defer wg.Done()
 
 	lis, err := net.Listen("tcp", net.JoinHostPort("", port))
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		logger.ErrorContext(ctx, "failed to listen", "error", err.Error())
+		os.Exit(1)
 	}
 
 	s := grpc.NewServer()
-	proto.RegisterTemplateServiceServer(s, pkg.NewServer(db))
+	proto.RegisterTemplateServiceServer(s, pkg.NewServer(db, logger))
 
-	log.Println("starting grpc server...")
+	logger.InfoContext(ctx, "starting grpc server...", "port", port)
 	go (func() {
 		if err := s.Serve(lis); err != nil {
-			log.Fatalf("failed to serve: %v", err)
+			logger.ErrorContext(ctx, "failed to serve grpc", "error", err.Error())
+			os.Exit(1)
 		}
 	})()
 
 	<-ctx.Done()
-	log.Println("shutting down grpc server...")
+	logger.InfoContext(ctx, "shutting down grpc server...")
 	s.GracefulStop()
 }

@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/Shikachuu/template-files/proto"
 	"google.golang.org/grpc/codes"
@@ -10,13 +11,14 @@ import (
 
 type Server struct {
 	proto.UnimplementedTemplateServiceServer
-	db Database
+	db     Database
+	logger *slog.Logger
 }
 
 var _ proto.TemplateServiceServer = &Server{}
 
-func NewServer(db Database) *Server {
-	return &Server{db: db}
+func NewServer(db Database, l *slog.Logger) *Server {
+	return &Server{db: db, logger: l}
 }
 
 func (s *Server) GetTemplateByName(ctx context.Context, r *proto.GetTemplateByNameRequest) (*proto.TemplateResponse, error) {
