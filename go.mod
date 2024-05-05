@@ -3,6 +3,7 @@ module github.com/Shikachuu/template-files
 go 1.22.2
 
 require (
+	go.etcd.io/bbolt v1.3.9
 	google.golang.org/grpc v1.63.2
 	google.golang.org/protobuf v1.33.0
 )
