@@ -16,6 +16,7 @@ import (
 	"github.com/Shikachuu/template-files/pkg"
 	"github.com/Shikachuu/template-files/pkg/web"
 	"github.com/Shikachuu/template-files/proto"
+	"go.etcd.io/bbolt"
 	"google.golang.org/grpc"
 )
 
@@ -27,12 +28,17 @@ func main() {
 }
 
 func run(ctx context.Context, w io.Writer) error {
-	var (
-		db internal.DummyDatabase
-		wg sync.WaitGroup
-	)
+	var wg sync.WaitGroup
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
+
+    bb, err := bbolt.Open("templates.db", 0600, nil)
+    if err != nil {
+        return err
+    }
+    defer bb.Close()
+
+    db := internal.NewBBoltDatabase(bb)
 
 	logger := slog.New(slog.NewTextHandler(
 		w,
@@ -43,10 +49,10 @@ func run(ctx context.Context, w io.Writer) error {
 	))
 
 	wg.Add(1)
-	go runGRPCServer(&wg, ctx, logger.With("server", "grpc"), &db, "8080")
+	go runGRPCServer(&wg, ctx, logger.With("server", "grpc"), db, "8080")
 
 	wg.Add(1)
-	go runHTTPServer(&wg, ctx, logger.With("server", "http"), &db, "8081")
+	go runHTTPServer(&wg, ctx, logger.With("server", "http"), db, "8081")
 
 	wg.Wait()
 	return nil
